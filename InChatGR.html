@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Leave a thought.</h1>
+            <p>A quiet space to start a conversation.</p>
+        </div>
+
+        <div id="code-display-section" class="hidden">
+            <p class="code-label">Your unique conversation key:</p>
+            <div class="code-box" id="unique-code-display"></div>
+            <p class="small-text">Keep this safe to check back later.</p>
+        </div>
+
+        <form id="message-form">
+            <div class="input-group">
+                <input type="text" id="subject" maxlength="30" placeholder="A brief subject" required autocomplete="off">
+                <span class="char-count" id="subject-count">0 / 30</span>
+            </div>
+
+            <div class="input-group">
+                <textarea id="message" maxlength="350" placeholder="What's on your mind?" required></textarea>
+                <span class="char-count" id="message-count">0 / 350</span>
+            </div>
+
+            <!-- This section appears dynamically if the admin boolean is true -->
+            <div id="email-request-section" class="hidden">
+                <p class="prompt-text">We'd love to continue this. Share your email?</p>
+                <input type="email" id="visitor-email" placeholder="Your email address">
+            </div>
+
+            <button type="submit" id="submit-btn">Send</button>
+            <div id="form-feedback"></div>
+        </form>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
+<style>
+:root {
+    --bg-gradient: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+    --card-bg: rgba(255, 255, 255, 0.85);
+    --text-main: #333;
+    --text-light: #666;
+    --accent: #6b8cce;
+    --error: #d9534f;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg-gradient);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    color: var(--text-main);
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.header p {
+    color: var(--text-light);
+    font-size: 14px;
+    margin: 0;
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 25px;
+}
+
+input[type="text"], input[type="email"], textarea {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.9);
+    font-size: 15px;
+    color: var(--text-main);
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+textarea {
+    resize: none;
+    height: 120px;
+}
+
+input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.char-count {
+    position: absolute;
+    bottom: -18px;
+    right: 5px;
+    font-size: 11px;
+    color: var(--text-light);
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+button:hover {
+    background-color: #5a7ab8;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.hidden {
+    display: none !important;
+}
+
+#form-feedback {
+    margin-top: 15px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--error);
+}
+
+.code-box {
+    background: #f0f4f8;
+    padding: 12px;
+    text-align: center;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.code-label, .small-text, .prompt-text {
+    font-size: 13px;
+    color: var(--text-light);
+    text-align: center;
+    margin: 5px 0;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const subjectInput = document.getElementById('subject');
+    const messageInput = document.getElementById('message');
+    const subjectCount = document.getElementById('subject-count');
+    const messageCount = document.getElementById('message-count');
+    const form = document.getElementById('message-form');
+    const feedback = document.getElementById('form-feedback');
+    const codeDisplaySection = document.getElementById('code-display-section');
+    const uniqueCodeDisplay = document.getElementById('unique-code-display');
+    const emailSection = document.getElementById('email-request-section');
+
+    // Regex to aggressively catch URLs, www, and TLDs (like .com, .org, .in)
+    const linkRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/[^\s]*)?)/gi;
+
+    // Simulate Admin Boolean (In reality, fetch this from your database)
+    const adminRequestedEmail = localStorage.getItem('adminRequestedEmail') === 'true'; 
+    
+    // Character counters
+    const updateCount = (input, counter, max) => {
+        counter.textContent = `${input.value.length} / ${max}`;
+    };
+
+    subjectInput.addEventListener('input', () => updateCount(subjectInput, subjectCount, 30));
+    messageInput.addEventListener('input', () => updateCount(messageInput, messageCount, 350));
+
+    // Check if returning visitor
+    let userCode = localStorage.getItem('visitorKey');
+    if (userCode) {
+        codeDisplaySection.classList.remove('hidden');
+        uniqueCodeDisplay.textContent = userCode;
+        
+        // If the admin (you) flipped the switch in the DB, show email input on their return visit
+        if (adminRequestedEmail) {
+            emailSection.classList.remove('hidden');
+        }
+    }
+
+    // Form Submission
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        feedback.textContent = ""; // Clear errors
+
+        const subjectStr = subjectInput.value.trim();
+        const messageStr = messageInput.value.trim();
+
+        // 1. Strict Link Validation
+        if (linkRegex.test(subjectStr) || linkRegex.test(messageStr)) {
+            feedback.textContent = "For security, please remove any links or web addresses from your message.";
+            return;
+        }
+
+        // 2. Length Validation (Fallback to HTML max-lengths)
+        if (subjectStr.length > 30 || messageStr.length > 350) {
+            feedback.textContent = "Please adhere to the character limits.";
+            return;
+        }
+
+        // 3. Generate Code if new user
+        if (!userCode) {
+            // Generates a simple 6-character alphanumeric code
+            userCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            localStorage.setItem('visitorKey', userCode);
+            codeDisplaySection.classList.remove('hidden');
+            uniqueCodeDisplay.textContent = userCode;
+        }
+
+        // 4. Secure submission handling
+        // IMPORTANT: Here is where you would normally run an API call (fetch)
+        // to send this data to a backend. Using DOM text properties (like textContent 
+        // on the receiving end) prevents Cross-Site Scripting (XSS).
+        
+        console.log("Payload to send to DB:", {
+            code: userCode,
+            subject: subjectStr,
+            message: messageStr,
+            email: document.getElementById('visitor-email')?.value || null
+        });
+
+        // Abstract success message
+        form.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <h3 style="color: #6b8cce;">Received.</h3>
+                <p style="color: #666; font-size: 14px;">Your message has been safely stored. Keep your key handy.</p>
+            </div>
+        `;
+    });
+});
+      </script>
