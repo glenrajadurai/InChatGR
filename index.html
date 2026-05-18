@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect - Thoughts & Messages</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+    <style>
+:root {
+    --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --card-bg: rgba(255, 255, 255, 0.92);
+    --text-main: #2d3748;
+    --text-light: #718096;
+    --accent: #667eea;
+    --success: #48bb78;
+    --error: #f56565;
+    --border: #e2e8f0;
+    --shadow: 0 20px 25px rgba(0, 0, 0, 0.08);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: var(--bg-gradient);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.container {
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 48px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeIn 0.8s ease-out 0.2s both;
+}
+
+.header h1 {
+    color: var(--text-main);
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--text-main));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.header p {
+    color: var(--text-light);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--text-light);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--error);
+    animation: pulse 2s infinite;
+}
+
+.status-dot.connected {
+    background: var(--success);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+#code-display-section {
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border);
+    animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.code-label {
+    font-size: 13px;
+    color: var(--text-light);
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.code-box {
+    background: white;
+    padding: 16px;
+    text-align: center;
+    border-radius: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    font-weight: 700;
+    border: 2px solid var(--accent);
+    user-select: all;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 12px 0;
+}
+
+.code-box:hover {
+    background: #f0f4ff;
+    transform: scale(1.02);
+}
+
+.small-text {
+    font-size: 12px;
+    color: var(--text-light);
+    text-align: center;
+}
+
+.form-section {
+    animation: fadeIn 0.6s ease-out 0.3s both;
+}
+
+#message-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.input-group {
+    position: relative;
+    animation: slideIn 0.4s ease-out backwards;
+}
+
+.input-group:nth-child(1) { animation-delay: 0.3s; }
+.input-group:nth-child(2) { animation-delay: 0.4s; }
+.input-group:nth-child(3) { animation-delay: 0.5s; }
+
+input[type="text"], 
+input[type="email"], 
+textarea {
+    width: 100%;
+    padding: 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    font-size: 16px;
+    color: var(--text-main);
+    font-family: inherit;
+    transition: all 0.3s ease;
+    resize: none;
+}
+
+input[type="text"]:focus, 
+input[type="email"]:focus, 
+textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+textarea {
+    height: 140px;
+    line-height: 1.6;
+}
+
+.char-count {
+    position: absolute;
+    bottom: -22px;
+    right: 0;
+    font-size: 12px;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.char-count.warning {
+    color: var(--error);
+}
+
+.email-section {
+    background: #f0f7ff;
+    padding: 16px;
+    border-radius: 12px;
+    border-left: 4px solid var(--accent);
+}
+
+.prompt-text {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+#submit-btn {
+    padding: 16px 24px;
+    background: linear-gradient(135deg, var(--accent), #764ba2);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+#submit-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: left 0.3s ease;
+}
+
+#submit-btn:hover::before {
+    left: 100%;
+}
+
+#submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+#submit-btn:active {
+    transform: translateY(0);
+}
+
+#submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#form-feedback {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 14px;
+    padding: 12px;
+    border-radius: 8px;
+    display: none;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#form-feedback.error {
+    background: #fed7d7;
+    color: var(--error);
+    border: 1px solid #fc8181;
+    display: block;
+}
+
+#form-feedback.success {
+    background: #c6f6d5;
+    color: #22543d;
+    border: 1px solid #9ae6b4;
+    display: block;
+}
+
+.success-state {
+    text-align: center;
+    padding: 20px;
+}
+
+.success-state h3 {
+    color: var(--accent);
+    font-size: 28px;
+    margin-bottom: 12px;
+}
+
+.success-state p {
+    color: var(--text-light);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 32px 24px;
+        border-radius: 16px;
+    }
+
+    .header h1 {
+        font-size: 28px;
+    }
+
+    .code-box {
+        font-size: 20px;
+        letter-spacing: 2px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    textarea {
+        font-size: 16px;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Leave a thought</h1>
+            <p>A quiet space to share your ideas. Your message will reach us directly.</p>
+        </div>
+
+        <div class="status-indicator">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">Connecting...</span>
+        </div>
+
+        <div id="code-display-section" class="hidden">
+            <p class="code-label">Your unique conversation key:</p>
+            <div class="code-box" id="unique-code-display"></div>
+            <p class="small-text">Keep this safe to check back later. We'll remember you.</p>
+        </div>
+
+        <div class="form-section">
+            <form id="message-form">
+                <div class="input-group">
+                    <input type="text" id="subject" maxlength="50" placeholder="What's this about?" required autocomplete="off">
+                    <span class="char-count" id="subject-count">0 / 50</span>
+                </div>
+
+                <div class="input-group">
+                    <textarea id="message" maxlength="500" placeholder="What's on your mind?" required></textarea>
+                    <span class="char-count" id="message-count">0 / 500</span>
+                </div>
+
+                <div id="email-request-section" class="hidden email-section">
+                    <p class="prompt-text">📧 We'd love to continue this. Share your email?</p>
+                    <input type="email" id="visitor-email" placeholder="your@email.com" autocomplete="off">
+                </div>
+
+                <button type="submit" id="submit-btn">Send Thought</button>
+                <div id="form-feedback"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+// ============================================
+// FIREBASE CONFIGURATION
+// ============================================
+// Replace with your Firebase config from Firebase Console
+const firebaseConfig = {
+  apiKey: "AIzaSyDLKbxYjUiXf5QXrKzDSVIudz1Rven0KQE",
+  authDomain: "inchatgr-b52df.firebaseapp.com",
+  projectId: "inchatgr-b52df",
+  storageBucket: "inchatgr-b52df.firebasestorage.app",
+  messagingSenderId: "1017185627268",
+  appId: "1:1017185627268:web:0f25b9cac8b230c68a66d1",
+  measurementId: "G-W8QQ01W7H7"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// ============================================
+// DOM ELEMENTS
+// ============================================
+const subjectInput = document.getElementById('subject');
+const messageInput = document.getElementById('message');
+const subjectCount = document.getElementById('subject-count');
+const messageCount = document.getElementById('message-count');
+const form = document.getElementById('message-form');
+const feedback = document.getElementById('form-feedback');
+const codeDisplaySection = document.getElementById('code-display-section');
+const uniqueCodeDisplay = document.getElementById('unique-code-display');
+const emailSection = document.getElementById('email-request-section');
+const submitBtn = document.getElementById('submit-btn');
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+
+// ============================================
+// VALIDATION & SECURITY
+// ============================================
+const linkRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/[^\s]*)?)/gi;
+
+function validateInput(subject, message) {
+    if (linkRegex.test(subject) || linkRegex.test(message)) {
+        return "For security, please remove links or web addresses.";
+    }
+    if (subject.length < 3) {
+        return "Subject should be at least 3 characters.";
+    }
+    if (message.length < 10) {
+        return "Message should be at least 10 characters.";
+    }
+    return null;
+}
+
+// ============================================
+// CHARACTER COUNTERS
+// ============================================
+const updateCount = (input, counter, max) => {
+    const count = input.value.length;
+    counter.textContent = `${count} / ${max}`;
+    if (count > max * 0.9) {
+        counter.classList.add('warning');
+    } else {
+        counter.classList.remove('warning');
+    }
+};
+
+subjectInput.addEventListener('input', () => updateCount(subjectInput, subjectCount, 50));
+messageInput.addEventListener('input', () => updateCount(messageInput, messageCount, 500));
+
+// ============================================
+// FIREBASE CONNECTION STATUS
+// ============================================
+const connectedRef = database.ref('.info/connected');
+connectedRef.on('value', (snapshot) => {
+    if (snapshot.val() === true) {
+        statusDot.classList.add('connected');
+        statusText.textContent = 'Connected';
+    } else {
+        statusDot.classList.remove('connected');
+        statusText.textContent = 'Offline';
+    }
+});
+
+// ============================================
+// GENERATE UNIQUE CODE & LOCAL STORAGE
+// ============================================
+function generateCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function initializeVisitor() {
+    let userCode = localStorage.getItem('visitorKey');
+    
+    if (!userCode) {
+        userCode = generateCode();
+        localStorage.setItem('visitorKey', userCode);
+        localStorage.setItem('visitorCreatedAt', new Date().toISOString());
+    }
+    
+    codeDisplaySection.classList.remove('hidden');
+    uniqueCodeDisplay.textContent = userCode;
+    
+    // Show email input on return visits
+    if (localStorage.getItem('hasVisited')) {
+        emailSection.classList.remove('hidden');
+    }
+    
+    return userCode;
+}
+
+// Initialize on page load
+let userCode = initializeVisitor();
+
+// ============================================
+// FORM SUBMISSION
+// ============================================
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    feedback.textContent = '';
+    feedback.classList.remove('error', 'success');
+    
+    const subjectStr = subjectInput.value.trim();
+    const messageStr = messageInput.value.trim();
+    const emailStr = document.getElementById('visitor-email')?.value?.trim() || null;
+
+    // Validation
+    const error = validateInput(subjectStr, messageStr);
+    if (error) {
+        feedback.textContent = error;
+        feedback.classList.add('error');
+        return;
+    }
+
+    // Disable button during submission
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    try {
+        const timestamp = new Date().toISOString();
+        const messageId = database.ref('messages').push().key;
+
+        // Save to Firebase Realtime Database
+        const messageData = {
+            id: messageId,
+            code: userCode,
+            subject: subjectStr,
+            message: messageStr,
+            email: emailStr,
+            timestamp: timestamp,
+            ipAddress: 'anonymous',
+            read: false
+        };
+
+        await database.ref('messages/' + messageId).set(messageData);
+
+        // Call Vercel function for email notification
+        if (emailStr) {
+            try {
+                await fetch('/api/send-notification', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        visitorEmail: emailStr,
+                        code: userCode,
+                        subject: subjectStr,
+                        message: messageStr
+                    })
+                });
+            } catch (emailError) {
+                console.log('Notification sent to database (email API may not be configured)');
+            }
+        }
+
+        // Mark as visited
+        localStorage.setItem('hasVisited', 'true');
+
+        // Success state
+        form.innerHTML = `
+            <div class="success-state">
+                <h3>✓ Received</h3>
+                <p>Your message is safely stored. Keep your key <strong>${userCode}</strong> handy to check back anytime.</p>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Submission error:', error);
+        feedback.textContent = 'Something went wrong. Please try again.';
+        feedback.classList.add('error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Thought';
+    }
+});
+
+// Copy code to clipboard on click
+uniqueCodeDisplay.addEventListener('click', () => {
+    navigator.clipboard.writeText(userCode);
+    const original = uniqueCodeDisplay.textContent;
+    uniqueCodeDisplay.textContent = 'Copied!';
+    setTimeout(() => {
+        uniqueCodeDisplay.textContent = original;
+    }, 2000);
+});
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "connect-messages",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "resend": "^2.0.0"
+  }
+}
